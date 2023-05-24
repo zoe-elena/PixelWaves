@@ -2,7 +2,7 @@ class Wave {
   public WaveType waveType;
   public PVector Position;
   public float Velocity;
-  public float Lifetime;
+  public float Lifespan;
   public PImage Image;
   public float Angle = 20;
   public float Width;
@@ -10,7 +10,7 @@ class Wave {
   public boolean collidedWithStone = false;
   
   private PImage sourceImage;
-  private float lifespan;
+  private float startLifespan;
   private float startWindAngle;
   private float startVelocity;
   
@@ -37,14 +37,14 @@ class Wave {
     Position = new PVector(_xPos, _yPos);
   }
 
-  public float getLifespan() {
-    return lifespan;
+  public float getStartLifespan() {
+    return startLifespan;
   }
 
-  public void setLifespan(float _min, float _max) {
-    float newLifespan = random(_min, _max);
-    lifespan = newLifespan;
-    Lifetime = newLifespan;
+  public void setStartLifespan(float _min, float _max) {
+    float newStartLifespan = random(_min, _max);
+    startLifespan = newStartLifespan;
+    Lifespan = newStartLifespan;
   }
 
   public float getStartWindAngle() {
