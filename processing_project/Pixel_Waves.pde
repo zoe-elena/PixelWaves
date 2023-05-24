@@ -7,19 +7,16 @@ PImage beachImg;
 Beach beach;
 Beach offsetBeach;
 
-// Waves
+// Wave Arrays
 ArrayList<Wave> waves = new ArrayList<Wave>();
 ArrayList<Wave> circularWaves = new ArrayList<Wave>();
-final int WIDTH_MAX = 20;
-final int WIDTH_MIN = 5;
-final float VELOCITY_MAX = 0.25f;
-final float VELOCITY_MIN = 0.15f;
-final float LIFESPAN_MAX = 5.0f;
-final float LIFESPAN_MIN = 3.0f;
-final float WAVE_SPAWNFREQUENCY_MAX = 0.3f;
-final float WAVE_SPAWNFREQUENCY_MIN = 0.2f;
-final float WAVE_SPAWN_THRESHOLD = 5.0f;
-float currentWaveSpawnFrequency = 0.1f;
+
+// Random Waves
+WaveType randomWave;
+
+
+// Swell Waves
+WaveType swellWave;
 
 // Wind
 final float WIND_THRESHOLD = 5;
@@ -29,12 +26,7 @@ float windAngle = 0;
 PImage stoneImg;
 Obstacle stone;
 PVector stonePos;
-final float STONEWAVE_LIFESPAN_MAX = 0.7f;
-final float STONEWAVE_LIFESPAN_MIN = 0.4f;
-final float STONEWAVE_SPAWNFREQUENCY_MAX = 1.0f;
-final float STONEWAVE_SPAWNFREQUENCY_MIN = 0.6f;
-final float STONEWAVE_SPREAD = 0.3f;
-float currentStonewaveSpawnFrequency = 0.3f;
+WaveType collisionWave;
 
 void setup() {
   size(800, 800);
@@ -42,9 +34,12 @@ void setup() {
   imageMode(CENTER);
   beach = new Beach(5.0f, 0.1f, 0.0f, 7.0f, 35.0f);
   offsetBeach = new Beach(5.0f, 0.1f, 10.0f, 4.0f, 0.0f);
+  randomWave = new WaveType(5, 8, 0.15f, 0.25f, 2.0f, 3.0f, 0.2f, 0.3f, 0.4f, 0.05f);
+  swellWave = new WaveType(5, 15, 0.2f, 0.2f, 4.0f, 20.0f, 1.0f, 1.2f, 0.4f, 0.05f);
   stoneImg = loadImage("Stone.png");
   stonePos = new PVector(60, 30);
   stone = new Obstacle(stonePos, stoneImg, new PVector(stoneImg.width, stoneImg.height / 2));
+  collisionWave = new WaveType(0, 0, 0.0f, 0.0f, 0.4f, 0.7, 0.6f, 1.0f, 0.3f, 0.3f);
 }
 
 void draw() {
@@ -56,21 +51,30 @@ void draw() {
   CreateBeachImage();
   image(beachImg, width / 2 / SCALE, beachImg.height / 2);
 
-  if (currentWaveSpawnFrequency > 0) {
-    currentWaveSpawnFrequency = currentWaveSpawnFrequency - (millis() - previousTime) / 1000.0f;
+  PVector center = new PVector(width / 2 / SCALE, height / 2 / SCALE);
+  PVector windDirection = new PVector(0, sqrt(height * height + width * width) / 2 / SCALE);
+  windDirection.rotate(radians(-windAngle));
+  PVector offsetWindDirection = windDirection.copy().rotate(radians(90));
+  offsetWindDirection.setMag(width / SCALE / 3);
+
+  if (swellWave.currentSpawnFrequency > 0) {
+    swellWave.currentSpawnFrequency = swellWave.currentSpawnFrequency - (millis() - previousTime) / 1000.0f;
   } else {
-    PVector randomSpawnPos = new PVector();
-    randomSpawnPos.x = random(-WAVE_SPAWN_THRESHOLD, width / SCALE + WAVE_SPAWN_THRESHOLD);
-    randomSpawnPos.y = random(20, height / SCALE + WAVE_SPAWN_THRESHOLD);
-    createNewWave(randomSpawnPos, LIFESPAN_MIN, LIFESPAN_MAX);
-    currentWaveSpawnFrequency = random(WAVE_SPAWNFREQUENCY_MIN, WAVE_SPAWNFREQUENCY_MAX);
+    PVector spawnPos = center.copy().add(windDirection);
+    for (int i = -1; i <= 1; i++) {
+      createNewWave(swellWave, spawnPos.copy().add(offsetWindDirection.copy().mult((float)i + random(-0.3f, 0.3f))));
+    }
+    swellWave.currentSpawnFrequency = random(swellWave.SPAWNFREQUENCY_MIN, swellWave.SPAWNFREQUENCY_MAX);
   }
 
-  if (currentStonewaveSpawnFrequency > 0) {
-    currentStonewaveSpawnFrequency = currentStonewaveSpawnFrequency - (millis() - previousTime) / 1000.0f;
+  if (randomWave.currentSpawnFrequency > 0) {
+    randomWave.currentSpawnFrequency = randomWave.currentSpawnFrequency - (millis() - previousTime) / 1000.0f;
   } else {
-    createNewCircularWave();
-    currentStonewaveSpawnFrequency = random(STONEWAVE_SPAWNFREQUENCY_MIN, STONEWAVE_SPAWNFREQUENCY_MAX);
+    PVector randomSpawnPos = new PVector();
+    randomSpawnPos.x = random(-0.5f, width / SCALE + 0.5f);
+    randomSpawnPos.y = random(20, height / SCALE + 0.5f);
+    createNewWave(randomWave, randomSpawnPos);
+    randomWave.currentSpawnFrequency = random(randomWave.SPAWNFREQUENCY_MIN, randomWave.SPAWNFREQUENCY_MAX);
   }
 
   updateWaves();
@@ -119,17 +123,17 @@ void CreateBeachImage() {
   beachImg = gradientImg;
 }
 
-void createNewWave(PVector _spawnPos, float _lifespanMin, float _lifespanMax) {
+void createNewWave(WaveType _waveType, PVector _spawnPos) {
   // Add new Wave
-  Wave newWave = new Wave();
+  Wave newWave = new Wave(_waveType);
   waves.add(newWave);
 
   // Set Values
-  newWave.setDimensions(WIDTH_MIN, WIDTH_MAX);
+  newWave.setDimensions(_waveType.WIDTH_MIN, _waveType.WIDTH_MAX);
   newWave.Angle = (int)random(windAngle - WIND_THRESHOLD, windAngle + WIND_THRESHOLD);
-  newWave.setStartVelocity(random(VELOCITY_MIN, VELOCITY_MAX));
+  newWave.setStartVelocity(random(_waveType.VELOCITY_MIN, _waveType.VELOCITY_MAX));
   newWave.Velocity = newWave.getStartVelocity();
-  newWave.setLifespan(_lifespanMin, _lifespanMax);
+  newWave.setLifespan(_waveType.LIFESPAN_MIN, _waveType.LIFESPAN_MAX);
   newWave.initializePosition(_spawnPos.x, _spawnPos.y);
   newWave.setStartWindAngle(windAngle);
   updateWaveImage(waves.size() - 1);
@@ -148,6 +152,15 @@ void updateWaveImage(int _index) {
   int h = (int)wave.Height;
   PImage waveImg = createImage(w, w, ARGB);
   float beachY = beach.GetY((int)wave.Position.x) + h / 2;
+
+  PVector waveStoneDiff = wave.Position.copy().sub(stone.getPosition());
+  waveStoneDiff.rotate(radians(wave.Angle));
+  if (waveStoneDiff.y - wave.Height < 0 && abs(waveStoneDiff.x) < wave.Width / 2 + stone.bounds.x / 2 ) {
+    if (abs(waveStoneDiff.x) < stone.bounds.x / 2) {
+      createNewCircularWave(wave);
+      lifetime = wave.Lifetime = 0;
+    }
+  }
 
   if (lifetime <= 0 || wave.Position.y <= beachY) {
     waves.remove(_index);
@@ -212,22 +225,23 @@ void updateWaveImage(int _index) {
     wave.Position.y -= wave.Velocity * cos(radians(wave.Angle));
     image(waveImg, wave.Position.x, wave.Position.y);
     wave.Image = waveImg;
-    wave.Width = wave.Width + 0.05f;
+    wave.Width = wave.Width + wave.waveType.SPREAD;
   }
 }
 
-void createNewCircularWave() {
+void createNewCircularWave(Wave _wave) {
   // Add new Wave
-  Wave newWave = new Wave();
+  Wave newWave = new Wave(collisionWave);
   circularWaves.add(newWave);
 
   // Set Values
   newWave.Width = (int)stone.getHitbox().x;
   newWave.Height = (int)stone.getHitbox().x;
-  newWave.setStartVelocity(random(VELOCITY_MIN, VELOCITY_MAX));
+  newWave.setStartVelocity(_wave.Velocity);
   newWave.Velocity = newWave.getStartVelocity();
-  newWave.setLifespan(STONEWAVE_LIFESPAN_MIN, STONEWAVE_LIFESPAN_MAX);
+  newWave.setLifespan(collisionWave.LIFESPAN_MIN, collisionWave.LIFESPAN_MAX);
   newWave.initializePosition(stone.getPosition().x, stone.getPosition().y);
+  newWave.Angle = _wave.Angle;
   updateCircularWaveImage(circularWaves.size() - 1);
 }
 
@@ -244,7 +258,6 @@ void updateCircularWaveImage(int _index) {
   if (pixelW % 2 == 1)
     pixelW += 1;
   PImage waveImg = createImage(pixelW, pixelW, ARGB);
-  wave.Angle = windAngle;
 
   if (currentLifespan <= 0) {
     circularWaves.remove(_index);
@@ -268,7 +281,7 @@ void updateCircularWaveImage(int _index) {
         // Calculate alpha according to angle
         PVector pixelSlope = new PVector(x - pixelW / 2.0f, y - pixelW / 2.0f);
         float pixelAngle = -degrees(atan2(pixelSlope.y, pixelSlope.x)) + 90;
-        float angleDiff = abs(pixelAngle - windAngle);
+        float angleDiff = abs(pixelAngle - wave.Angle);
         if (angleDiff > 360)
           angleDiff -= 360;
         if (angleDiff > 180)
@@ -294,7 +307,7 @@ void updateCircularWaveImage(int _index) {
     //    wave.Position.y -= wave.Velocity * cos(radians(wave.CurrentAngle)) / 5.0f;
     image(waveImg, wave.Position.x, wave.Position.y);
     wave.Image = waveImg;
-    wave.Height = wave.Width = wave.Width + STONEWAVE_SPREAD;
+    wave.Height = wave.Width = wave.Width + collisionWave.SPREAD;
     wave.Lifetime = currentLifespan - (millis() - previousTime) / 1000.0f;
   }
 }

@@ -1,5 +1,5 @@
 class Wave {
-
+  public WaveType waveType;
   public PVector Position;
   public float Velocity;
   public float Lifetime;
@@ -12,6 +12,10 @@ class Wave {
   private float lifespan;
   private float startWindAngle;
   private float startVelocity;
+  
+  Wave(WaveType _waveType){
+    waveType = _waveType;
+  }
 
   public PImage getSourceImage() {
     return sourceImage;
@@ -24,7 +28,7 @@ class Wave {
   public void setDimensions(int _min, int _max) {
     int randomWidth = (int)random(_min, _max);
     Width = randomWidth;
-    int randomHeight = randomWidth / (int)random(2, 3);
+    int randomHeight = randomWidth / (int)random(2.0f, 2.5f);
     Height = randomHeight;
   }
 
