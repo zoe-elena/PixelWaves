@@ -10,6 +10,7 @@ class Wave {
   private float waveWidth;
   private float waveHeight;
   private float lifespan;
+  private float startWindAngle;
 
   public PImage getSourceImage() {
     return sourceImage;
@@ -30,7 +31,7 @@ class Wave {
   public void setDimensions(int _min, int _max) {
     int randomWidth = (int)random(_min, _max);
     waveWidth = randomWidth;
-    int randomHeight = randomWidth / (int)random(3, 5);
+    int randomHeight = randomWidth / (int)random(2, 3);
     waveHeight = randomHeight;
   }
 
@@ -54,5 +55,13 @@ class Wave {
     float newLifespan = random(_min, _max);
     lifespan = newLifespan;
     CurrentLifespan = newLifespan;
+  }
+
+  public float getStartWindAngle() {
+    return startWindAngle;
+  }
+
+  public void setStartWindAngle(float _s) {
+    startWindAngle = _s;
   }
 }
