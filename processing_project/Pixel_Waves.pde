@@ -1,4 +1,5 @@
 // General
+final int SCALE = 10;
 int previousTime;
 
 // Beach
@@ -8,7 +9,6 @@ Beach offsetBeach;
 
 // Waves
 ArrayList<Wave> waves = new ArrayList<Wave>();
-final int SCALE = 10;
 final int WIDTH_MAX = 20;
 final int WIDTH_MIN = 5;
 final float VELOCITY_MAX = 0.3f;
@@ -21,9 +21,8 @@ final float SPAWN_THRESHOLD = 5;
 float currentSpawnFrequency = 0.1f;
 
 // Wind
-float windAngle = -20;
 final float WIND_THRESHOLD = 5;
-
+float windAngle = -20;
 
 void setup() {
   size(800, 800);
@@ -36,7 +35,7 @@ void setup() {
 void draw() {
   background(50, 150, 255);
   scale(SCALE);
-  
+
   PImage ocean = loadImage("Ocean.png");
   image(ocean, ocean.width/2, height/SCALE - ocean.height/2);
   CreateBeachImage();
@@ -44,7 +43,7 @@ void draw() {
   if (currentSpawnFrequency > 0) {
     currentSpawnFrequency = currentSpawnFrequency - (millis() - previousTime) / 1000.0f;
   } else {
-    createNewWave(random(-SPAWN_THRESHOLD, width / SCALE + SPAWN_THRESHOLD), random(beach.verticalOffset, height / SCALE + SPAWN_THRESHOLD));
+    createNewWave(random(-SPAWN_THRESHOLD, width / SCALE + SPAWN_THRESHOLD), random(beach.hitbox, height / SCALE + SPAWN_THRESHOLD));
     currentSpawnFrequency = random(SPAWNFREQUENCY_MIN, SPAWNFREQUENCY_MAX);
   }
 
@@ -60,11 +59,15 @@ void draw() {
 
 void mousePressed() {
   if (mouseButton == LEFT) {
-    PVector p = new PVector(0, -height);
-    PVector q = new PVector(mouseX - width/2, mouseY - height);
-    if (mouseX > 0)
-      windAngle = degrees(atan2(p.y, p.x) - atan2(q.y, q.x));
+    AngleWindToMouse();
   }
+}
+
+void AngleWindToMouse() {
+  PVector p = new PVector(0, -height);
+  PVector q = new PVector(mouseX - width/2, mouseY - height);
+  if (mouseX > 0)
+    windAngle = degrees(atan2(p.y, p.x) - atan2(q.y, q.x));
 }
 
 void CreateBeachImage() {
@@ -121,11 +124,9 @@ void updateWaveImage(int _index) {
   } else {
     float beachAngle = degrees(atan(beach.GetDerivationY((int)wave.Position.x)));
     float lerpProgress = 1 - ((wave.Position.y - beach.verticalOffset) / (beach.hitbox - beach.verticalOffset));
-
-    if (wave.Position.y <= beach.hitbox)
-      wave.CurrentAngle = lerp(wave.getStartWindAngle(), -beachAngle, lerpProgress);
-    else
-      wave.CurrentAngle = wave.getStartWindAngle();
+    if (lerpProgress < 0)
+      lerpProgress = 0;
+    wave.CurrentAngle = lerp(wave.getStartWindAngle(), -beachAngle, lerpProgress);
 
     for (int x = 0; x < w; x++) {
       for (int y = 0; y < w; y++) {
@@ -142,12 +143,16 @@ void updateWaveImage(int _index) {
         float alpha = 255 * absDistance;
         alpha *= -distance.y / h * 2.0f;
 
-        //if (currentLifespan <= wave.getLifespan())
-        //  alpha *= 1 - currentLifespan / wave.getLifespan();
-
-        //        if (wave.Position.y <= beachHitbox - 20) {
-        //          alpha *= (wave.Position.y - 10) / (beachHitbox - 20 - 10);
-        //        }
+        // Calculate alpha accoring to lifetime and poximity to beach
+        float normalizedLifespan = wave.getLifespan() - currentLifespan;
+        float beachAlpha = (wave.Position.y - beach.GetY((int)wave.Position.x) + 1) / (beach.hitbox - beach.GetY((int)wave.Position.x + 1));
+        float lifetimeAlpha;
+        if (normalizedLifespan <= wave.getLifespan() / 2.0f) {
+          lifetimeAlpha = 2.0f * normalizedLifespan / wave.getLifespan();
+        } else {
+          lifetimeAlpha = 2.0f - (2.0f * normalizedLifespan / wave.getLifespan());
+        }
+        alpha *= lerp(lifetimeAlpha, beachAlpha, lerpProgress);
 
         if (absDistance < 1) {
           image.set(x, y, color(255, 255, 255, alpha));
@@ -164,15 +169,5 @@ void updateWaveImage(int _index) {
     wave.CurrentImage = image;
     wave.setWidth(wave.getWidth() + 0.05f);
     wave.CurrentLifespan = currentLifespan - (millis() - previousTime) / 1000.0f;
-  }
-}
-
-float clamp(float value, float min, float max) {
-  if (value < min) {
-    return min;
-  } else if (value > max) {
-    return max;
-  } else {
-    return value;
   }
 }
