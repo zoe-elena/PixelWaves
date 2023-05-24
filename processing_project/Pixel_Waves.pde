@@ -155,10 +155,13 @@ void updateWaveImage(int _index) {
 
   PVector waveStoneDiff = wave.Position.copy().sub(stone.getPosition());
   waveStoneDiff.rotate(radians(wave.Angle));
-  if (waveStoneDiff.y - wave.Height < 0 && abs(waveStoneDiff.x) < wave.Width / 2 + stone.bounds.x / 2 ) {
+  if (waveStoneDiff.y - wave.Height < 0 && abs(waveStoneDiff.x) < wave.Width / 3.0f) {
     if (abs(waveStoneDiff.x) < stone.bounds.x / 2) {
-      createNewCircularWave(wave);
       lifetime = wave.Lifetime = 0;
+    }
+    if (!wave.collidedWithStone) {
+      createNewCircularWave(wave);
+      wave.collidedWithStone = true;
     }
   }
 

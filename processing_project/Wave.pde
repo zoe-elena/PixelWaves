@@ -7,6 +7,7 @@ class Wave {
   public float Angle = 20;
   public float Width;
   public float Height;
+  public boolean collidedWithStone = false;
   
   private PImage sourceImage;
   private float lifespan;
