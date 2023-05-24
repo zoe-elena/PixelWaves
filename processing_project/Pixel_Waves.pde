@@ -1,14 +1,14 @@
 ArrayList<Wave> waves = new ArrayList<Wave>();
 PImage beach;
 int previousTime;
+float waveSpawnFrequency = 0.1f;
 
 // Wave Particle Attributes
 final int SCALE = 10;
-final int BEACH_SCALE = 2;
 final int RANDOM_WIDTH_MAX = 30;
 final int RANDOM_WIDTH_MIN = 5;
 final float RANDOM_VELOCITY_MAX = 0.3f;
-final float RANDOM_VELOCITY_MIN = 0.2f;
+final float RANDOM_VELOCITY_MIN = 0.3f;
 final float RANDOM_LIFESPAN_MAX = 3;
 final float RANDOM_LIFESPAN_MIN = 2;
 final float WIND_ANGLE = 20;
@@ -24,32 +24,53 @@ void setup() {
 void draw() {
   background(50, 150, 255);
   scale(SCALE);
+  if (waveSpawnFrequency > 0) {
+    waveSpawnFrequency = waveSpawnFrequency - (millis() - previousTime) / 1000.0f;
+  } else {
+    createNewWave(random(-5, width / SCALE + 5), random(height / SCALE - 5, height / SCALE + 5));
+    waveSpawnFrequency = random(0.1f, 0.5f);
+  }
+
   image(beach, width / 2 / SCALE, beach.height / 2);
   updateWaves();
   previousTime = millis();
+
+  PImage arrow = loadImage("Arrow.png");
+  translate(2 + arrow.width/2, height/SCALE - 2 - arrow.height/2);
+  rotate(-radians(WIND_ANGLE));
+  image(arrow, 0, 0);
 }
 
 void mousePressed() {
   if (mouseButton == LEFT) {
-    createNewWave();
+    createNewWave(mouseX / SCALE, mouseY / SCALE);
   }
 }
 
 void CreateBeachImage() {
   int beachWidth = width / SCALE;
-  int beachHeight = 0;
+  int beachHeight = height / SCALE;
   PImage gradientImage = createImage(beachWidth, beachHeight, ARGB);
-
-  for (int y = 0; y <= gradientImage.height; y++) {
-    for (int x = 0; x <= gradientImage.width; x++) {
-      gradientImage.set(x, y, color(244, 164, 96));
+  float frequency = 0.1f;
+  float amplitude = 3f;
+  float verticalOffset = 7;
+  float horizontalOffset = 0;
+  for (int x = 0; x <= gradientImage.height; x++) {
+    int yPixel = (int)(verticalOffset + amplitude * sin((x + horizontalOffset) * frequency));
+    float gradientHeight = (int)(10 + 3 * sin((x + 10) * frequency));
+    for (int y = 0; y <= yPixel; y++) {
+      gradientImage.set(x, y, color(244, 200, 96, 255));
+    }
+    for (int y = 0; y < gradientHeight; y++) {
+      int discreteHeight = (int)(gradientHeight / (gradientHeight - y)) + 1;
+      gradientImage.set(x, yPixel + y, color(244, 200, 96, 255 / discreteHeight));
     }
   }
 
   beach = gradientImage;
 }
 
-void createNewWave() {
+void createNewWave(float _xPos, float _yPos) {
   // Add new Wave
   Wave newWave = new Wave();
   waves.add(newWave);
@@ -59,7 +80,7 @@ void createNewWave() {
   newWave.CurrentAngle = (int)random(WIND_ANGLE - WIND_THRESHOLD, WIND_ANGLE + WIND_THRESHOLD);
   newWave.Velocity = random(RANDOM_VELOCITY_MIN, RANDOM_VELOCITY_MAX);
   newWave.setLifespan(RANDOM_LIFESPAN_MIN, RANDOM_LIFESPAN_MAX);
-  newWave.initializePosition(mouseX, mouseY);
+  newWave.initializePosition(_xPos, _yPos);
   updateWaveImage(waves.size() - 1);
 }
 
@@ -83,13 +104,13 @@ void updateWaveImage(int _index) {
   } else {
     for (int y = 0; y < w; y++) {
       for (int x = 0; x < w; x++) {
-        PVector radius = new PVector(x - w / 2.0f, y - w / 2.0f);
-        radius.rotate(radians(wave.CurrentAngle));
-        float absDistance = dist(0, 0, radius.x / (w / 2.0f), radius.y / (h / 2.0f)); // Distance of pixel to center
+        PVector distance = new PVector(x - w / 2.0f, y - w / 2.0f);
+        distance.rotate(radians(wave.CurrentAngle));
+        float absDistance = dist(0, 0, distance.x / (w / 2.0f), distance.y / (h / 2.0f)); // Distance of pixel to center
 
         // Calculate alpha according to distance to middle, bottom and lifespan
         float alpha = 255 * absDistance;
-        alpha *= -radius.y / h * 2.0f;
+        alpha *= -distance.y / h * 2.0f;
 
         if (currentLifespan > wave.getLifespan() / 2)
           alpha *= (wave.getLifespan() - currentLifespan) / wave.getLifespan();

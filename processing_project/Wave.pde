@@ -30,7 +30,7 @@ class Wave {
   public void setDimensions(int _min, int _max) {
     int randomWidth = (int)random(_min, _max);
     waveWidth = randomWidth;
-    int randomHeight = randomWidth / (int)random(2, 3);
+    int randomHeight = randomWidth / (int)random(3, 5);
     waveHeight = randomHeight;
   }
 
@@ -42,10 +42,8 @@ class Wave {
     waveHeight = height;
   }
 
-  public void initializePosition(float _mouseX, float _mouseY) {
-    float xPos = _mouseX / SCALE;
-    float yPos = _mouseY / SCALE;
-    Position = new PVector(xPos, yPos);
+  public void initializePosition(float _xPos, float _yPos) {
+    Position = new PVector(_xPos, _yPos);
   }
 
   public float getLifespan() {
